@@ -20,7 +20,7 @@ def proxy_save(sender, **kwargs):
         #tags aren't required so test
         tags = getattr(cls, 'tags', None)
         if tags:
-            a.tags = getattr(instance, cls.tags, None)
+            obj.tags = getattr(instance, cls.tags, None)
         a.save()
     else:
         #this instance already exists let's try and grab it's Aggregate
