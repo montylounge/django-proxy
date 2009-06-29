@@ -1,5 +1,6 @@
 from django.db.models import get_model
 from django.contrib.contenttypes.models import ContentType
+from datetime import datetime
 
 def proxy_save(sender, **kwargs):
     ''' Handles the save/update of a Proxy instance. '''
@@ -16,7 +17,8 @@ def proxy_save(sender, **kwargs):
         obj.content_object = instance
         obj.title = getattr(instance, cls.title, None)
         obj.description = getattr(instance, cls.description, None)
-
+        obj.pub_date = getattr(instance, cls.pub_date, datetime.now())
+        
         #tags aren't required so test
         tags = getattr(cls, 'tags', None)
         if tags:
@@ -33,6 +35,7 @@ def proxy_save(sender, **kwargs):
 
         obj.title = getattr(instance, cls.title, None)            
         obj.description = getattr(instance, cls.description, None)
+        obj.pub_date = getattr(instance, cls.pub_date, datetime.now())
         
         #ag_tags must be string but default to None so we confirm
         tags = getattr(cls, 'tags', None)
