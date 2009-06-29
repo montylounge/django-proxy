@@ -15,10 +15,13 @@ class ProxyBase(models.Model):
     object_id = models.PositiveIntegerField()
     content_object = generic.GenericForeignKey()
 
-    #denormalized data
+    #denormalized fields
     title = models.CharField(max_length=255, blank=True, null=True)
     description = models.TextField(blank=True, null=True)
     tags = models.CharField(max_length=255, blank=True, null=True)
+    pub_date = models.DateTimeField(default=datetime.now)
+    
+    #audit fields
     created_on = models.DateTimeField(default=datetime.now)
     updated_on = models.DateTimeField(default=datetime.now)
         
