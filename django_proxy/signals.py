@@ -21,12 +21,12 @@ def proxy_save(sender, **kwargs):
         #pub_date isn't required so confirm
         pub_date = getattr(cls, 'pub_date', None)
         if pub_date:
-            obj.pub_date = pub_date
+            obj.pub_date = getattr(instance, cls.pub_date)
         
         #tags aren't required so confirm
         tags = getattr(cls, 'tags', None)
         if tags:
-            obj.tags = tags
+            obj.tags = getattr(instance, cls.tags)
         obj.save()
     else:
         #this instance already exists let's try and grab it's Proxy instance
@@ -43,12 +43,12 @@ def proxy_save(sender, **kwargs):
         #proxy pub_date isn't required so confirm
         pub_date = getattr(cls, 'pub_date', None)
         if pub_date:
-            obj.pub_date = pub_date
+            obj.pub_date = getattr(instance, cls.pub_date)
         
         #proxy tag isn't require so confirm
         tags = getattr(cls, 'tags', None)
         if tags:
-            obj.tags = tags
+            obj.tags = getattr(instance, cls.tags)
         obj.save()
 
 def proxy_delete(sender, **kwargs):
