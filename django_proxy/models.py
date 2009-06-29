@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.contenttypes import generic
 from django.contrib.contenttypes.models import ContentType
 from datetime import datetime
+from django_proxy.managers import PublicManager
 
 class ProxyBase(models.Model):
     '''Represents the proxy objects. Retains the name, description,
@@ -24,6 +25,8 @@ class ProxyBase(models.Model):
     #audit fields
     created_on = models.DateTimeField(default=datetime.now)
     updated_on = models.DateTimeField(default=datetime.now)
+    
+    objects = PublicManager()
         
     def __unicode__(self):
         return '%s' % self.title
