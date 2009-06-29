@@ -17,15 +17,19 @@ def proxy_save(sender, **kwargs):
         obj.content_object = instance
         obj.title = getattr(instance, cls.title, None)
         obj.description = getattr(instance, cls.description, None)
-        obj.pub_date = getattr(instance, cls.pub_date, datetime.now())
         
-        #tags aren't required so test
+        #pub_date isn't required so confirm
+        pub_date = getattr(cls, 'pub_date', None)
+        if pub_date:
+            obj.pub_date = pub_date
+        
+        #tags aren't required so confirm
         tags = getattr(cls, 'tags', None)
         if tags:
-            obj.tags = getattr(instance, cls.tags, None)
+            obj.tags = tags
         obj.save()
     else:
-        #this instance already exists let's try and grab it's Aggregate
+        #this instance already exists let's try and grab it's Proxy instance
         try:
             ctype = ContentType.objects.get_for_model(instance)
             obj = model._default_manager.get(object_id=instance.id, content_type=ctype)
@@ -35,12 +39,16 @@ def proxy_save(sender, **kwargs):
 
         obj.title = getattr(instance, cls.title, None)            
         obj.description = getattr(instance, cls.description, None)
-        obj.pub_date = getattr(instance, cls.pub_date, datetime.now())
+
+        #proxy pub_date isn't required so confirm
+        pub_date = getattr(cls, 'pub_date', None)
+        if pub_date:
+            obj.pub_date = pub_date
         
-        #ag_tags must be string but default to None so we confirm
+        #proxy tag isn't require so confirm
         tags = getattr(cls, 'tags', None)
         if tags:
-            obj.tags = getattr(instance, cls.tags)
+            obj.tags = tags
         obj.save()
 
 def proxy_delete(sender, **kwargs):
