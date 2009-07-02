@@ -3,5 +3,6 @@ syntax: glob
 *.pyc
 *.txt
 *.db
+*.DS_Store
 
 

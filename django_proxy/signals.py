@@ -14,6 +14,20 @@ def proxy_save(sender, **kwargs):
     #is this is a new instance?
     if created:
         obj = model()
+        
+        #does this piece of content care about active state awareness?
+        if hasattr(cls,'active'):
+            try:
+                active_field = getattr(cls, 'active')           
+                objfield = active_field.keys()[0]
+                active_status = active_field.values()[0]
+                actual_status = getattr(instance, objfield, None)
+                if not (active_status == actual_status):
+                    return
+            except Exception:
+                #TODO: cleaner exception handling/messaging
+                pass
+        
         obj.content_object = instance
         obj.title = getattr(instance, cls.title, None)
         obj.description = getattr(instance, cls.description, None)
@@ -36,6 +50,20 @@ def proxy_save(sender, **kwargs):
         except model.DoesNotExist:
             obj = model()
             obj.content_object = instance
+
+        #does this piece of content care about active state awareness?
+        if obj.id != None and hasattr(cls,'active'):
+            try:
+                active_field = getattr(cls, 'active')         
+                objfield = active_field.keys()[0]
+                active_status = active_field.values()[0]
+                actual_status = getattr(instance, objfield, None)
+                if not (active_status == actual_status):
+                    obj.delete()
+                    return
+            except Exception:
+                #TODO: cleaner exception handling/messaging
+                pass
 
         obj.title = getattr(instance, cls.title, None)            
         obj.description = getattr(instance, cls.description, None)

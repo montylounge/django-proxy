@@ -19,14 +19,22 @@ Current implementation example:
     ...
 
     class Post(models.model):
+    	STATUS_CHOICES = (
+        	(1, _('Draft')),
+        	(2, _('Public')),
+    	)
         
         title = models.CharField(max_length=150)
         body = models.TextField()
-        tags = TagField()
+        tag_data = TagField()
+		status = models.IntegerField(_('status'), choices=STATUS_CHOICES, default=2)
 
     	class ProxyMeta:
         	title = 'title'
         	description = 'body'
+			tags = 'tag_data'
+			active = {'status':2}
+
 
     signals.post_save.connect(proxy_save, Post, True)
     signals.post_delete.connect(proxy_delete, Post)
