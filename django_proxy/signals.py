@@ -52,18 +52,24 @@ def proxy_save(sender, **kwargs):
             obj.content_object = instance
 
         #does this piece of content care about active state awareness?
+        active_field = getattr(cls, 'active')
+        objfield = active_field.keys()[0]
+        active_status = active_field.values()[0]
+        actual_status = getattr(instance, objfield, None)
+
         if obj.id != None and hasattr(cls,'active'):
             try:
-                active_field = getattr(cls, 'active')
-                objfield = active_field.keys()[0]
-                active_status = active_field.values()[0]
-                actual_status = getattr(instance, objfield, None)
                 if not (active_status == actual_status):
                     obj.delete()
                     return
             except Exception:
                 #TODO: cleaner exception handling/messaging
                 pass
+        elif obj.id == None and hasattr(cls,'active'):
+            #is this object in a state other than active if so return
+            if not (active_status == actual_status):
+                return
+
 
         obj.title = getattr(instance, cls.title, None)
         obj.description = getattr(instance, cls.description, None)
@@ -96,4 +102,3 @@ def proxy_delete(sender, **kwargs):
         obj.delete()
     except DoesNotExist:
         pass
-
