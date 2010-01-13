@@ -5,8 +5,8 @@ setup(
     version='0.1.0',
     description='This is a content aggregation solution via proxy intermediary models.',
     author='Kevin Fricovsky',
-    author_email='kfricovsky@gmail.com',
-    url='http://bitbucket.org/montylounge/django-proxy/',
+    author_email='kevin@montylounge.com',
+    url='http://github.com/montylounge/django-proxy',
     packages=['django_proxy'],
 )
  

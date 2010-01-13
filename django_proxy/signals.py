@@ -1,6 +1,6 @@
 from django.db.models import get_model
 from django.contrib.contenttypes.models import ContentType
-
+from datetime import datetime
 
 def proxy_save(sender, **kwargs):
     ''' Handles the save/update of a Proxy instance. '''
@@ -10,12 +10,41 @@ def proxy_save(sender, **kwargs):
     cls = instance.ProxyMeta
     model_str = getattr(cls, 'model_str', 'django_proxy.proxy')
     model = get_model(*model_str.split('.'))
-    obj = model()
-    active = False
 
+    active_field = getattr(cls, 'active', None)
+    pub_date = getattr(cls, 'pub_date', None)
+    
+    #is this is a new instance?
     if created:
+        obj = model()
+
+        #does this piece of content care about active state awareness?
+        if active_field:
+            try:
+                objfield = active_field.keys()[0]
+                active_status = active_field.values()[0]
+                actual_status = getattr(instance, objfield, None)
+                if not (active_status == actual_status):
+                    return
+            except Exception:
+                #TODO: cleaner exception handling/messaging
+                pass
+
         obj.content_object = instance
+        obj.title = getattr(instance, cls.title, None)
+        obj.description = getattr(instance, cls.description, None)
+
+        #pub_date isn't required so confirm
+        if pub_date:
+            obj.pub_date = getattr(instance, cls.pub_date)
+
+        #tags aren't required so confirm
+        tags = getattr(cls, 'tags', None)
+        if tags:
+            obj.tags = getattr(instance, cls.tags)
+        obj.save()
     else:
+        #this instance already exists let's try and grab it's Proxy instance
         try:
             ctype = ContentType.objects.get_for_model(instance)
             obj = model._default_manager.get(object_id=instance.id, content_type=ctype)
@@ -23,69 +52,40 @@ def proxy_save(sender, **kwargs):
             obj = model()
             obj.content_object = instance
 
-    if hasattr(cls, 'active'):
-        if isinstance(cls.active, basestring):
-            active_field = getattr(instance, cls.active, None)
-            if callable(active_field):
-                active = active_field()
-            else:
-                # test for Boolean field names, strings, etc
-                pass
-        else:
+        #does this piece of content care about active state awareness?
+        if active_field:
+            objfield = active_field.keys()[0]
+            active_status = active_field.values()[0]
+            actual_status = getattr(instance, objfield, None)
+
+        if obj.id != None and active_field:
             try:
-                active_field = cls.active
-                objfield = active_field.keys()[0]
-                active_status = active_field.values()[0]
-                actual_status = getattr(instance, objfield, None)
-                if active_status == actual_status:
-                    active = True
+                if not (active_status == actual_status):
+                    obj.delete()
+                    return
             except Exception:
-                # deal with this better...
+                #TODO: cleaner exception handling/messaging
                 pass
-    else:
-        active = True
+        
+        elif obj.id == None and active_field:
+            #is this object in a state other than active if so return
+            if not (active_status == actual_status):
+                return
 
-    if not active and obj.id:
-        obj.delete()
-        return
 
-    if hasattr(cls, 'title'):
-        title = getattr(instance, cls.title, None)
-        if callable(title):
-            obj.title = title()
-        else:
-            obj.title = title
-    else:
-        raise Exception('Missing title field')
+        obj.title = getattr(instance, cls.title, None)
+        obj.description = getattr(instance, cls.description, None)
 
-    if hasattr(cls, 'description'):
-        description = getattr(instance, cls.description, None)
-        if callable(description):
-            obj.description = description()
-        else:
-            obj.description = description
-    else:
-        raise Exception('Missing description field')
+        #proxy pub_date isn't required so confirm
+        pub_date = getattr(cls, 'pub_date', None)
+        if pub_date:
+            obj.pub_date = getattr(instance, cls.pub_date)
 
-    #proxy pub_date isn't required so confirm
-    if hasattr(cls, 'pub_date'):
-        pub_date = getattr(instance, cls.pub_date, None)
-        if callable(pub_date):
-            obj.pub_date = pub_date()
-        else:
-            obj.pub_date = pub_date
-
-    #proxy tag isn't require so confirm
-    if hasattr(cls, 'tags'):
-        tags = getattr(instance, cls.tags, None)
-        if callable(tags):
-            obj.tags = tags()
-        else:
-            obj.tags = tags
-
-    if active:
+        #proxy tag isn't require so confirm
+        tags = getattr(cls, 'tags', None)
+        if tags:
+            obj.tags = getattr(instance, cls.tags)
         obj.save()
-
 
 def proxy_delete(sender, **kwargs):
     '''Responsible for handling the deletion of any child/associated Proxy records.
@@ -100,7 +100,7 @@ def proxy_delete(sender, **kwargs):
     model_str = getattr(cls, 'model_str', 'django_proxy.proxy')
     model = get_model(*model_str.split('.'))
     try:
-        obj = model._default_manager.get(object_id=instance.id, content_type=ctype)
+        obj =  model._default_manager.get(object_id=instance.id, content_type=ctype)
         obj.delete()
-    except model.DoesNotExist:
+    except DoesNotExist:
         pass
