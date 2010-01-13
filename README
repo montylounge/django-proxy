@@ -15,10 +15,12 @@ Next up is making it further extensible for custom ProxyBase child classes.
 Current implementation example:
 
 	from django.db import models
+  from django.db.models import signals
 	from django_proxy.signals import proxy_save, proxy_delete
+
 	...
 
-	class Post(models.model):
+	class Post(models.Model):
 		STATUS_CHOICES = (
 			(1, _('Draft')),
 			(2, _('Public')),
