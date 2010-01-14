@@ -16,30 +16,30 @@ available in the database and the relationship to the source object is
 available via Generic Relation, if needed.
 
 Current implementation example:
-    
+
 <pre>
     from django.db import models
     from django.db.models import signals
     from django_proxy.signals import proxy_save, proxy_delete
     ...
 
-    class Post(models.model):
-    	STATUS_CHOICES = (
-        	(1, _('Draft')),
-        	(2, _('Public')),
-    	)
-        
+    class Post(models.Model):
+        STATUS_CHOICES = (
+            (1, _('Draft')),
+            (2, _('Public')),
+        )
+
         title = models.CharField(max_length=150)
         body = models.TextField()
         tag_data = TagField()
-		status = models.IntegerField(_('status'), choices=STATUS_CHOICES, 
-									default=2)
+        status = models.IntegerField(_('status'), choices=STATUS_CHOICES, 
+                                    default=2)
 
-    	class ProxyMeta:
-        	title = 'title'
-        	description = 'body'
-			tags = 'tag_data'
-			active = {'status':2}
+        class ProxyMeta:
+            title = 'title'
+            description = 'body'
+            tags = 'tag_data'
+            active = {'status':2}
 
 
     signals.post_save.connect(proxy_save, Post, True)
