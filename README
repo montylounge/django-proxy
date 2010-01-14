@@ -1,0 +1,43 @@
+
+Intro
+-----
+
+This project is based on the concept I used to aggregate Links, Posts,
+Episodes, etc for This Week In Django's rss feed.
+
+I initially implemented a more "reusable" version of it on my old, personal blog
+howiworkdaily. Compared to what I used for TWiD. Since I'm soon migrating off my own
+custom blog engine, I thought it would be a good idea to clean up the code,
+refactor, and make it available for reuse.
+
+Next up is making it further extensible for custom ProxyBase child classes.
+
+Current implementation example:
+
+	from django.db import models
+  from django.db.models import signals
+	from django_proxy.signals import proxy_save, proxy_delete
+
+	...
+
+	class Post(models.Model):
+		STATUS_CHOICES = (
+			(1, _('Draft')),
+			(2, _('Public')),
+		)
+
+		title = models.CharField(max_length=150)
+		body = models.TextField()
+		tag_data = TagField()
+		status = models.IntegerField(_('status'), choices=STATUS_CHOICES, default=2)
+
+		class ProxyMeta:
+			title = 'title'
+			description = 'body'
+			tags = 'tag_data'
+			active = {'status':2}
+
+
+	signals.post_save.connect(proxy_save, Post, True)
+	signals.post_delete.connect(proxy_delete, Post)
+
