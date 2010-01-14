@@ -8,5 +8,14 @@ setup(
     author_email='kevin@montylounge.com',
     url='http://github.com/montylounge/django-proxy',
     packages=['django_proxy'],
+    classifiers=[
+        'Development Status :: 3 - Alpha',
+        'Environment :: Web Environment',
+        'Intended Audience :: Developers',
+        'License :: OSI Approved :: BSD License',
+        'Operating System :: OS Independent',
+        'Programming Language :: Python',
+        'Framework :: Django',
+    ],
 )
  
