@@ -1,0 +1,102 @@
+
+
+h1. Quick introduction
+
+What django-proxy provides is an aggregation of different content types by 
+denormalizing fields on various models into one database table (using signals 
+to update/delete changes to those denormalized fields). 
+
+The ideal use case for Django-Proxy is a tumblelog or lifestream.
+
+This concept was initially used on my old blog (howiworkdaily.com) and a hacked
+version in the TWiD (thisweekindjango) "everything" feed. I like to say this 
+is a poor man's "django-tumbleweed":http://github.com/mcroydon/django-tumbleweed, which defines itself as "A framework for creating 
+tumblelog views of Django models indexed by Haystack" to provide similar 
+functionality. What I like about django-proxy is that the denormalized data is 
+available in the database and the relationship to the source object is 
+available via Generic Relation, if needed.
+
+h1. Integration
+
+First you need to grab the source which is available on github's "django-proxy":http://github.com/montylounge/django-proxy project home.
+
+There are four basic steps to integrating django-proxy into your project.
+
+# add `django_proxy` to you INSTALLED__APPS settings.py
+# run `syncdb` to create the database schema (it creates one table)
+# add ProxyMeta inner class to the models you'd like to aggregate (example below)
+# wire up the signals for post_save and post_delete (example below)
+
+Let's take a quick look at the example to better understand.
+
+<pre>
+    from django.db import models
+    from django.db.models import signals
+    from django_proxy.signals import proxy_save, proxy_delete
+    ...
+
+    class Post(models.model):
+    	STATUS_CHOICES = (
+        	(1, _('Draft')),
+        	(2, _('Public')),
+    	)
+        
+        title = models.CharField(max_length=150)
+        body = models.TextField()
+        tag_data = TagField()
+		status = models.IntegerField(_('status'), choices=STATUS_CHOICES, 
+									default=2)
+
+    	class ProxyMeta:
+        	title = 'title'
+        	description = 'body'
+			tags = 'tag_data'
+			active = {'status':2}
+
+
+    signals.post_save.connect(proxy_save, Post, True)
+    signals.post_delete.connect(proxy_delete, Post)
+</pre>
+
+The above is a blog Post model. What the above code allows you to do is set a ProxyMeta inner class on the model
+you'd like to aggregate and select their fields you'd like to have denormalized 
+in your aggregate model. In the above example we have a Post model and we want to
+have our stream feed display the Title, Body, Tags only for posts with a active state
+of 2, meaning its Public for viewing. These values can also be callables if you
+would like, but that's up to you.
+
+Now if you also had bookmarks in this application of yours, one would assume
+that you would share a similar ProxyMeta configuration. A Bookmark normally has
+a title, a description, and tags fields. Now it may nor may not have an active state. 
+Django-Proxy won't validate the active state if you don't provide it 
+declaratively so you're AOK if you don't provide one.
+
+Now when you save, update, or delete models in your database wired up to Django-Proxy
+their denormalized data is maintained, along with any other content types 
+that have been wired up as well.
+
+Let's take a look at what the default fixture for Proxy model from Django-Mingus looks like.
+The below is a `select` statement on the Django-Proxy database table.
+
+<pre>
+	content_type_id|object_id|title|tags
+	36|1|Mingus - Making the complicated simple|mingus
+	36|2|Plomer - Creativity is the power to connect.|creativity, connect
+	36|3|Adams - Creativity is allowing yourself to make mistakes|creativity, mistakes
+	15|1|Welcome to Mingus|django, django-mingus, blog
+	15|2|Charles Mingus -Moanin|mingus, jazz
+	15|3|User Based Debug your Django App|snippet, debug
+	18|1|Django Community|django, community
+</pre>
+
+If you noticed above Django-Proxy maintains different model types in the same 
+table, along with the denormalized fields. By storing the `content_type_id`
+and the `object_id` we can easily retrieve a model instance for any additional
+field look ups we need. Additionally we gain the benefit of denormalization, which
+could(should) reduce the number of queries needed to retrieve data for display
+and also, arguably, simplifies searching for data across various types if the end
+goals is aggregation. In the end it comes down to your use case and implementation, 
+but Django-Proxy is designed to simplify the lifestream/tumblelog concept and
+data aggregation needs on the database level. 
+
+
