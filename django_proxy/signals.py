@@ -29,8 +29,7 @@ def proxy_save(sender, **kwargs):
             if callable(active_field):
                 active = active_field()
             else:
-                # test for Boolean field names, strings, etc
-                pass
+                active = active_field
         else:
             try:
                 active_field = cls.active
