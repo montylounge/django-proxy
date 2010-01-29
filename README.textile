@@ -42,7 +42,6 @@ Nothing external. No contrib apps. Just Django proper.
 
 h2. TODO
 
-* Allowing passing a callable for `active` business logic handling
 * Decouple further via signals possibly, removing ProxyMeta from the design
 
 h3. Examples
