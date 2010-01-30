@@ -1,14 +1,10 @@
 import datetime
 
-from django.db.models import get_model
 from django.contrib.contenttypes.models import ContentType
+from django.db.models import get_model
 
 
 class DjangoProxy(object):
-    instance = None
-    object = None
-    proxy_model = None
-
     _required_fields = ['title', 'description']
     _field_mappings = [
         ('title', None),
@@ -16,27 +12,27 @@ class DjangoProxy(object):
         ('pub_date', datetime.datetime.now()),
         ('tags', None),
     ]
+    content_object = None
+    proxy_model = None
 
     def __init__(self, instance, created=None):
-        self.instance = instance
-        self.proxy_model = instance.ProxyMeta
-
+        self.content_object = instance
         model = self._get_proxy_model(instance)
-        self.object = model()
+        self.proxy_model = model()
 
         if created:
-            self.object.content_object = instance
+            self.proxy_model.content_object = instance
         else:
             try:
                 ctype = ContentType.objects.get_for_model(instance)
-                self.object = model._default_manager.get(object_id=instance.id, content_type=ctype)
+                self.proxy_model = model._default_manager.get(object_id=instance.id, content_type=ctype)
             except model.DoesNotExist:
-                self.object = model()
-                self.object.content_object = instance
+                self.proxy_model = model()
+                self.proxy_model.content_object = instance
 
     def _get_attr(self, attr, obj):
-        if hasattr(self.proxy_model, attr):
-            value = getattr(self.instance, getattr(obj, attr))
+        if hasattr(self.content_object.ProxyMeta, attr):
+            value = getattr(self.content_object, getattr(obj, attr))
             if callable(value):
                 return value()
             else:
@@ -47,57 +43,61 @@ class DjangoProxy(object):
         model = get_model(*model_str.split('.'))
         return model
 
-    def _valdiate(self):
+    def _validate(self):
         missing = []
         for field in self._required_fields:
-            if not getattr(self.proxy_model, field, None):
+            if not getattr(self.content_object.ProxyMeta, field, None):
                 missing.append(field)
         if len(missing):
             raise ValueError('Missing required fields: %s' % (', '.join(missing)))
-
-    def create(self):
-        self._valdiate()
-        active = self.get_active()
-        object = self.object
-
-        if active:
-            for mapping in self._field_mappings:
-                setattr(object, mapping[0], self._get_attr(mapping[0], self.proxy_model) or mapping[1])
-            object.active = active
-            object.save()
-
-        elif object.id:
-            object.delete()
 
     def delete(self):
         """
         Remove any remaining child/associated Proxy records.
 
         """
-        model = self._get_proxy_model(self.instance)
-        ctype = ContentType.objects.get_for_model(self.instance)
+        model = self._get_proxy_model(self.content_object)
+        ctype = ContentType.objects.get_for_model(self.content_object)
         try:
-            self.object = model._default_manager.get(object_id=self.instance.id, content_type=ctype)
-            self.object.delete()
+            self.proxy_model = model._default_manager.get(object_id=self.content_object.id, content_type=ctype)
+            self.proxy_model.delete()
         except model.DoesNotExist:
             pass
 
+    def update(self):
+        """
+        Updates the status of the ProxyModel to either show or or get deleted
+        depending on if the object is active.
+
+        """
+        self._validate()
+        active = self.get_active()
+        object = self.proxy_model
+
+        if active:
+            for mapping in self._field_mappings:
+                setattr(object, mapping[0], self._get_attr(mapping[0], self.content_object.ProxyMeta) or mapping[1])
+            object.active = active
+            object.save()
+        elif object.id:
+            object.delete()
+
     def get_active(self):
         active = False
-        if hasattr(self.proxy_model, 'active'):
-            if isinstance(self.proxy_model.active, basestring):
-                active_field = getattr(self.instance, self.proxy_model.active)
+        if hasattr(self.content_object.ProxyMeta, 'active'):
+            if isinstance(self.content_object.ProxyMeta.active, basestring):
+                active_field = getattr(self.content_object, self.content_object.ProxyMeta.active)
                 if callable(active_field):
                     active = active_field()
                 else:
                     active = active_field
 
-            elif isinstance(self.proxy_model.active, dict):
+            elif isinstance(self.content_object.ProxyMeta.active, dict):
                 try:
-                    active_field = self.proxy_model.active
+                    active_field = self.content_object.ProxyMeta.active
                     objfield = active_field.keys()[0]
                     active_status = active_field.values()[0]
-                    actual_status = getattr(self.instance, objfield)
+                    actual_status = getattr(self.content_object, objfield)
                     if active_status == actual_status:
                         active = True
 
@@ -118,7 +118,7 @@ def proxy_save(sender, **kwargs):
     created = kwargs['created']
 
     dp = DjangoProxy(instance, created)
-    dp.create()
+    dp.update()
 
 
 def proxy_delete(sender, **kwargs):
