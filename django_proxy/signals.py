@@ -20,15 +20,11 @@ class DjangoProxy(object):
         model = self._get_proxy_model(instance)
         self.proxy_model = model()
 
-        if created:
+        try:
+            ctype = ContentType.objects.get_for_model(instance)
+            self.proxy_model = model._default_manager.get(object_id=instance.id, content_type=ctype)
+        except model.DoesNotExist:
             self.proxy_model.content_object = instance
-        else:
-            try:
-                ctype = ContentType.objects.get_for_model(instance)
-                self.proxy_model = model._default_manager.get(object_id=instance.id, content_type=ctype)
-            except model.DoesNotExist:
-                self.proxy_model = model()
-                self.proxy_model.content_object = instance
 
     def _get_attr(self, attr, obj):
         if hasattr(self.content_object.ProxyMeta, attr):
