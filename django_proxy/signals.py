@@ -34,9 +34,8 @@ class DjangoProxy(object):
         if hasattr(self.content_object.ProxyMeta, attr):
             value = getattr(self.content_object, getattr(obj, attr))
             if callable(value):
-                return value()
-            else:
-                return value
+                value = value()
+            return value
 
     def _get_proxy_model(self, instance):
         model_str = getattr(instance.ProxyMeta, 'model_str', 'django_proxy.proxy')
@@ -72,15 +71,14 @@ class DjangoProxy(object):
         """
         self._validate()
         active = self.get_active()
-        object = self.proxy_model
 
         if active:
             for mapping in self._field_mappings:
-                setattr(object, mapping[0], self._get_attr(mapping[0], self.content_object.ProxyMeta) or mapping[1])
-            object.active = active
-            object.save()
-        elif object.id:
-            object.delete()
+                setattr(self.proxy_model, mapping[0], self._get_attr(mapping[0], self.content_object.ProxyMeta) or mapping[1])
+            self.proxy_model.active = active
+            self.proxy_model.save()
+        elif self.proxy_model.id:
+            self.proxy_model.delete()
 
     def get_active(self):
         active = False
@@ -88,9 +86,8 @@ class DjangoProxy(object):
             if isinstance(self.content_object.ProxyMeta.active, basestring):
                 active_field = getattr(self.content_object, self.content_object.ProxyMeta.active)
                 if callable(active_field):
-                    active = active_field()
-                else:
-                    active = active_field
+                    active_field = active_field()
+                active = active_field
 
             elif isinstance(self.content_object.ProxyMeta.active, dict):
                 try:
@@ -100,7 +97,6 @@ class DjangoProxy(object):
                     actual_status = getattr(self.content_object, objfield)
                     if active_status == actual_status:
                         active = True
-
                 except Exception:
                     pass
         else:
